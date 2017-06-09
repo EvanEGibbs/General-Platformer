@@ -63,6 +63,10 @@ public class Controller2D : RaycastController {
 
 			if (hit) {
 
+				if (hit.collider.tag == "Through") {
+					continue;
+				}
+
 				if (hit.distance == 0) {
 					continue;
 				}
@@ -150,16 +154,19 @@ public class Controller2D : RaycastController {
 					if (directionY == 1 || hit.distance == 0) {
 						continue;
 					}
-					if (collisions.fallingThroughPlatform) {
+					if (collisions.fallingThrough == true && collisions.fallingThroughPlatform == hit.collider) {
 						continue;
 					}
 					if (playerInput.y == -1) {
-						collisions.fallingThroughPlatform = true;
-						Invoke("ResetFallingThroughPlatform", .5f);
-						continue;
+						if (hit.collider == collisions.fallingThroughPlatform) {
+							collisions.fallingThrough = true;
+							continue;
+						}
 					}
 				}
 
+				collisions.fallingThrough = false;
+				collisions.fallingThroughPlatform = hit.collider;
 				velocity.y = (hit.distance - SKIN_WIDTH) * directionY;
 				rayLength = hit.distance;
 
@@ -189,10 +196,6 @@ public class Controller2D : RaycastController {
 		}
 	}
 
-	void ResetFallingThroughPlatform() {
-		collisions.fallingThroughPlatform = false;
-	}
-
 	public struct CollisionInfo {
 		public bool above, below;
 		public bool left, right;
@@ -202,7 +205,8 @@ public class Controller2D : RaycastController {
 		public float slopeAngle, slopeAngleOld;
 		public Vector3 velocityOld;
 		public int faceDirection;
-		public bool fallingThroughPlatform;
+		public bool fallingThrough;
+		public Collider2D fallingThroughPlatform;
 
 		public void Reset() {
 			above = below = false;
