@@ -5,7 +5,8 @@ using UnityEngine;
 [RequireComponent (typeof(Controller2D))]
 public class Player : MonoBehaviour {
 
-	public float jumpHeight = 4;
+	public float maxJumpHeight = 4;
+	public float minJumpHeight = 1;
 	public float timeToJumpApex = .4f;
 	float accelerationTimeAirborne = .2f;
 	float accelerationTimeGrounded = .1f;
@@ -20,7 +21,8 @@ public class Player : MonoBehaviour {
 	float timeToWallUnstick;
 
 	float gravity;
-	float jumpVelocity;
+	float maxJumpVelocity;
+	float minJumpVelocity;
 	Vector3 velocity;
 	float velocityXSmoothing;
 
@@ -30,9 +32,11 @@ public class Player : MonoBehaviour {
 		controller = GetComponent<Controller2D>();
 
 		//explanation of the following math: https://www.youtube.com/watch?v=PlT44xr0iW0&t=9s at around 6 minutes
-		gravity = -(2 * jumpHeight) / Mathf.Pow(timeToJumpApex, 2);
-		jumpVelocity = Mathf.Abs(gravity) * timeToJumpApex;
-		Debug.Log("Gravity " + gravity + " jump velocity: " + jumpVelocity);
+		gravity = -(2 * maxJumpHeight) / Mathf.Pow(timeToJumpApex, 2);
+		maxJumpVelocity = Mathf.Abs(gravity) * timeToJumpApex;
+		//math here: https://www.youtube.com/watch?v=rVfR14UNNDo&t=2s
+		minJumpVelocity = Mathf.Sqrt(2 * Mathf.Abs(gravity) * minJumpHeight);
+		Debug.Log("Gravity " + gravity + " jump velocity: " + maxJumpVelocity);
 	}
 
 	void Update() {
@@ -65,10 +69,6 @@ public class Player : MonoBehaviour {
 			}
 		}
 
-		if (controller.collisions.above || controller.collisions.below) {
-			velocity.y = 0;
-		}
-
 		if (Input.GetKeyDown(KeyCode.Space)) {
 			if (wallSliding) {
 				if (wallDirX == input.x) {
@@ -83,11 +83,20 @@ public class Player : MonoBehaviour {
 				}
 			}
 			if (controller.collisions.below) {
-				velocity.y = jumpVelocity;
+				velocity.y = maxJumpVelocity;
+			}
+		}
+		if (Input.GetKeyUp(KeyCode.Space)) {
+			if (velocity.y > minJumpVelocity) {
+				velocity.y = minJumpVelocity;
 			}
 		}
 
 		velocity.y += gravity * Time.deltaTime;
-		controller.Move(velocity * Time.deltaTime);
+		controller.Move(velocity * Time.deltaTime, input);
+
+		if (controller.collisions.above || controller.collisions.below) {
+			velocity.y = 0;
+		}
 	}
 }
