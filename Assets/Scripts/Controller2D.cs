@@ -8,7 +8,7 @@ public class Controller2D : RaycastController {
 
 	public CollisionInfo collisions;
 	[HideInInspector]
-	public Vector2 playerInput;
+	public Vector2 directionalInput;
 
 	public override void Start() {
 		base.Start();
@@ -16,14 +16,15 @@ public class Controller2D : RaycastController {
 	}
 
 	public void Move(Vector2 moveAmount, bool standingOnPlatform) {
-		Move(moveAmount, Vector2.zero, standingOnPlatform);
+		Move(moveAmount, false, Vector2.zero, standingOnPlatform);
 	}
 
-	public void Move(Vector2 moveAmount, Vector2 input, bool standingOnPlatform = false) {
+	public void Move(Vector2 moveAmount, bool jumpInputDown, Vector2 _directionalInput, bool standingOnPlatform = false) {
 		UpdateRaycastOrigins();
 		collisions.Reset();
 		collisions.moveAmountOld = moveAmount;
-		playerInput = input;
+		directionalInput = _directionalInput;
+
 		
 		if (moveAmount.y < 0) {
 			DescendSlope(ref moveAmount);
@@ -33,10 +34,10 @@ public class Controller2D : RaycastController {
 			collisions.faceDirection = (int)Mathf.Sign(moveAmount.x);
 		}
 
-		HorizontalCollisions(ref moveAmount);
+		HorizontalCollisions(ref moveAmount, jumpInputDown);
 
 		if (moveAmount.y != 0) {
-			VerticalCollisions(ref moveAmount);
+			VerticalCollisions(ref moveAmount, jumpInputDown);
 		}
 
 		transform.Translate(moveAmount);
@@ -46,7 +47,7 @@ public class Controller2D : RaycastController {
 		}
 	}
 
-	void HorizontalCollisions(ref Vector2 moveAmount) {
+	void HorizontalCollisions(ref Vector2 moveAmount, bool jumpInputDown) {
 		float directionX = collisions.faceDirection;
 		float rayLength = Mathf.Abs(moveAmount.x) + SKIN_WIDTH;
 
@@ -54,7 +55,7 @@ public class Controller2D : RaycastController {
 			rayLength = 2 * SKIN_WIDTH;
 		}
 
-		for (int i = 0; i < horizontalRayCount; i++) {
+		for (int i = (!jumpInputDown)?0:1; i < horizontalRayCount; i++) {
 			Vector2 rayOrigin = (directionX == -1) ? raycastOrigins.bottomLeft : raycastOrigins.bottomRight;
 			rayOrigin += Vector2.up * (horizontalRaySpacing * i);
 			RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.right * directionX, rayLength, collisionMask);
@@ -165,7 +166,7 @@ public class Controller2D : RaycastController {
 		}
 	}
 
-	void VerticalCollisions(ref Vector2 moveAmount) {
+	void VerticalCollisions(ref Vector2 moveAmount, bool jumpInputDown) {
 		float directionY = Mathf.Sign(moveAmount.y);
 		float rayLength = Mathf.Abs(moveAmount.y) + SKIN_WIDTH;
 		for (int i = 0; i < verticalRayCount; i++) {
@@ -183,7 +184,10 @@ public class Controller2D : RaycastController {
 					if (collisions.fallingThrough == true && collisions.fallingThroughPlatform == hit.collider) {
 						continue;
 					}
-					if (playerInput.y == -1) {
+					if (directionalInput.y == -1) {
+						collisions.readyToFallThrough = true;
+					}
+					if (directionalInput.y == -1 && jumpInputDown) {
 						if (hit.collider == collisions.fallingThroughPlatform) {
 							collisions.fallingThrough = true;
 							continue;
@@ -236,6 +240,7 @@ public class Controller2D : RaycastController {
 		public Vector2 moveAmountOld;
 		public int faceDirection;
 		public bool fallingThrough;
+		public bool readyToFallThrough;
 		public Collider2D fallingThroughPlatform;
 
 		public void Reset() {
@@ -244,6 +249,7 @@ public class Controller2D : RaycastController {
 			climbingSlope = false;
 			descendingSlope = false;
 			slidingDownMaxSlope = false;
+			readyToFallThrough = false;
 			slopeAngleOld = slopeAngle;
 			slopeAngle = 0;
 			slopeNormal = Vector2.zero;

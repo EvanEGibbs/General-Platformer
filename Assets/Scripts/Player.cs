@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent (typeof(Controller2D))]
+[RequireComponent (typeof(PlayerInput))]
 public class Player : MonoBehaviour {
 
 	public float maxJumpHeight = 4;
@@ -31,6 +32,7 @@ public class Player : MonoBehaviour {
 	Vector2 directionalInput;
 	bool wallSliding;
 	int wallDirX;
+	bool jumpInputDown;
 
 	void Start () {
 		controller = GetComponent<Controller2D>();
@@ -48,7 +50,7 @@ public class Player : MonoBehaviour {
 		CalculateVelocity();
 		HandleWallSliding();
 
-		controller.Move(velocity * Time.deltaTime, directionalInput);
+		controller.Move(velocity * Time.deltaTime, jumpInputDown, directionalInput);
 
 		if (controller.collisions.above || controller.collisions.below) {
 			if (controller.collisions.slidingDownMaxSlope) {
@@ -57,6 +59,7 @@ public class Player : MonoBehaviour {
 				velocity.y = 0;
 			}
 		}
+		jumpInputDown = false;
 	}
 
 	public void SetDirectionalInput(Vector2 input) {
@@ -64,6 +67,7 @@ public class Player : MonoBehaviour {
 	}
 
 	public void OnJumpInputDown() {
+		jumpInputDown = true;
 		//wall jumping
 		if (wallSliding) {
 			if (wallDirX == directionalInput.x) {
@@ -89,9 +93,9 @@ public class Player : MonoBehaviour {
 					velocity.x = maxJumpVelocity * controller.collisions.slopeNormal.x;
 
 				}
-			} 
-			//jump off of ground
-			else {
+			}
+			//jump off of ground normally if not going to jump down a through platform
+			else if (!controller.collisions.readyToFallThrough) {
 				velocity.y = maxJumpVelocity;
 			}
 		}
