@@ -51,7 +51,11 @@ public class Player : MonoBehaviour {
 		controller.Move(velocity * Time.deltaTime, directionalInput);
 
 		if (controller.collisions.above || controller.collisions.below) {
-			velocity.y = 0;
+			if (controller.collisions.slidingDownMaxSlope) {
+				velocity.y += controller.collisions.slopeNormal.y * -gravity * Time.deltaTime;
+			} else {
+				velocity.y = 0;
+			}
 		}
 	}
 
@@ -60,6 +64,7 @@ public class Player : MonoBehaviour {
 	}
 
 	public void OnJumpInputDown() {
+		//wall jumping
 		if (wallSliding) {
 			if (wallDirX == directionalInput.x) {
 				timeToWallUnstick = 0;
@@ -75,8 +80,20 @@ public class Player : MonoBehaviour {
 				velocity.y = wallLeap.y;
 			}
 		}
+
 		if (controller.collisions.below) {
-			velocity.y = maxJumpVelocity;
+			//jump while sliding down a steep slope
+			if (controller.collisions.slidingDownMaxSlope) {
+				if (directionalInput.x != -Mathf.Sign(controller.collisions.slopeNormal.x)) { //not jumping against max slope
+					velocity.y = maxJumpVelocity * controller.collisions.slopeNormal.y;
+					velocity.x = maxJumpVelocity * controller.collisions.slopeNormal.x;
+
+				}
+			} 
+			//jump off of ground
+			else {
+				velocity.y = maxJumpVelocity;
+			}
 		}
 	}
 	public void OnJumpInputUp() {
