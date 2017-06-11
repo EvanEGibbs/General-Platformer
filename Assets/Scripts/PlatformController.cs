@@ -119,7 +119,7 @@ public class PlatformController : RaycastController {
 		}
 
 		// Horizontally moving platform
-		if (velocity.x != 0) {
+		if (velocity.x != 0 && tag != "Through") {
 			float rayLength = Mathf.Abs(velocity.x) + SKIN_WIDTH;
 			for (int i = 0; i < horizontalRayCount; i++) {
 				Vector2 rayOrigin = (directionX == -1) ? raycastOrigins.bottomLeft : raycastOrigins.bottomRight;
