@@ -4,7 +4,9 @@ using UnityEngine;
 
 public class CameraFollow : MonoBehaviour {
 
-	public Controller2D target;
+	//explanation of whole class: https://www.youtube.com/watch?v=WL_PaUyRAXQ&t=1s
+
+	public Controller2D target; //usually the player
 	public float verticalOffset;
 	public float lookAheadDstX;
 	public float lookSmoothTimeX;
@@ -25,7 +27,7 @@ public class CameraFollow : MonoBehaviour {
 		focusArea = new FocusArea(target.myCollider.bounds, focusAreaSize);
 	}
 
-	private void LateUpdate() {
+	private void LateUpdate() { //late update so the camera adjusts itself after all movement is finished
 		focusArea.Update(target.myCollider.bounds);
 
 		Vector2 focusPosition = focusArea.center + Vector2.up * verticalOffset;

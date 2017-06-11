@@ -24,7 +24,7 @@ public class PlatformController : RaycastController {
 
 	public override void Start() {
 		base.Start();
-
+		//to draw the gizmos at run time, also makes it so they won't move around as the platform moves
 		globalWaypoints = new Vector3[localWaypoints.Length];
 		for (int i = 0; i < localWaypoints.Length; i++) {
 			globalWaypoints[i] = localWaypoints[i] + transform.position;
@@ -32,32 +32,32 @@ public class PlatformController : RaycastController {
 	}
 
 	private void Update() {
-
 		UpdateRaycastOrigins();
 
 		Vector3 velocity = CalculatePlatformMovement();
 
 		CalculatePassengerMovement(velocity);
-
+		//may beed to move the passenger before or after moving the platform, depending on if it's carrying the passenger up, pushing the passenger down, etc.
 		MovePassengers(true);
 		transform.Translate(velocity);
 		MovePassengers(false);
 	}
 
-	float Ease(float x) {
+	float Ease(float x) {//calculate easing between waypoints
 		float a = easeAmount + 1;
 		//Math for this at https://www.youtube.com/watch?v=3D0PeJh6GY8 at around 14 minutes
 		return Mathf.Pow(x,a) / (Mathf.Pow(x,a) + Mathf.Pow(1-x,a));
 	}
 
 	Vector3 CalculatePlatformMovement() {
-
+		//halts between platform movement if there is a wait(nextmovetime)
 		if (Time.time < nextMoveTime) {
 			return Vector3.zero;
 		}
-
+		//if, say, the way point number is 5 out of for, it will reset to the first one
 		fromWaypointIndex %= globalWaypoints.Length;
 		int toWaypointIndex = (fromWaypointIndex + 1) % globalWaypoints.Length;
+		//check which way point moving from, which waypont moving to, get the distance, percent between, and finally the eased number
 		float distanceBetweenWaypoints = Vector3.Distance(globalWaypoints[fromWaypointIndex], globalWaypoints[toWaypointIndex]);
 		percentBetweenWaypoints += Time.deltaTime * speed/distanceBetweenWaypoints;
 		percentBetweenWaypoints = Mathf.Clamp01(percentBetweenWaypoints);
@@ -65,10 +65,11 @@ public class PlatformController : RaycastController {
 
 		Vector3 newPos = Vector3.Lerp(globalWaypoints[fromWaypointIndex], globalWaypoints[toWaypointIndex], easedPercentBetweenWaypoints);
 
+		//if got to next waypoint, move up the index one
 		if (percentBetweenWaypoints >= 1) {
 			percentBetweenWaypoints = 0;
 			fromWaypointIndex++;
-			if (!cyclic) {
+			if (!cyclic) { //reverse index if not cyclic
 				if (fromWaypointIndex >= globalWaypoints.Length - 1) {
 					fromWaypointIndex = 0;
 					System.Array.Reverse(globalWaypoints);
@@ -80,19 +81,19 @@ public class PlatformController : RaycastController {
 		return newPos - transform.position;
 	}
 
-	void MovePassengers(bool beforeMovePlatform) {
+	void MovePassengers(bool beforeMovePlatform) { //move each passenger
 		foreach(PassengerMovement passenger in passengerMovement) {
-			if (!passengerDictionary.ContainsKey(passenger.transform)) {
+			if (!passengerDictionary.ContainsKey(passenger.transform)) { //if the passenger is not part of the dictionary, add it
 				passengerDictionary.Add(passenger.transform, passenger.transform.GetComponent<Controller2D>());
 			}
-			if (passenger.moveBeforePlatform == beforeMovePlatform) {
+			if (passenger.moveBeforePlatform == beforeMovePlatform) { //checks if moving before or after and that both line up. Takes passenger from dictionary and uses their apropriate controller2d move function
 				passengerDictionary[passenger.transform].Move(passenger.velocity, passenger.standingOnPlatform);
 			}
 		}
 	}
 
 	void CalculatePassengerMovement(Vector3 velocity) {
-		HashSet<Transform> movedPassengers = new HashSet<Transform>();
+		HashSet<Transform> movedPassengers = new HashSet<Transform>(); //make sure not to move the same passenger twice
 		passengerMovement = new List<PassengerMovement>();
 
 		float directionX = Mathf.Sign(velocity.x);

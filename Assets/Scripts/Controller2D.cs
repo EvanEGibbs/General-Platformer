@@ -5,16 +5,17 @@ using UnityEngine;
 public class Controller2D : RaycastController {
 
 	public float maxSlopeAngle = 80;
-
+	//collision info holds all the information about the objects collissions, resets every frame and then re-calculates
 	public CollisionInfo collisions;
 	[HideInInspector]
 	public Vector2 directionalInput;
 
 	public override void Start() {
 		base.Start();
+		//default to facing right
 		collisions.faceDirection = 1;
 	}
-
+	//move function for objects that are not controlled, calls the next move function wiith zeroed out controller information
 	public void Move(Vector2 moveAmount, bool standingOnPlatform) {
 		Move(moveAmount, false, Vector2.zero, standingOnPlatform);
 	}
@@ -24,24 +25,25 @@ public class Controller2D : RaycastController {
 		collisions.Reset();
 		collisions.moveAmountOld = moveAmount;
 		directionalInput = _directionalInput;
-
 		
+		//check for decending slopes
 		if (moveAmount.y < 0) {
 			DescendSlope(ref moveAmount);
 		}
-
+		//update which direction facing
 		if (moveAmount.x != 0) {
 			collisions.faceDirection = (int)Mathf.Sign(moveAmount.x);
 		}
-
+		//Horizontal Collisions
 		HorizontalCollisions(ref moveAmount, jumpInputDown);
-
+		//Vertical Collisions
 		if (moveAmount.y != 0) {
 			VerticalCollisions(ref moveAmount, jumpInputDown);
 		}
 
 		transform.Translate(moveAmount);
 
+		//used for moving platforms, tells the player he's standing on a platform
 		if (standingOnPlatform) {
 			collisions.below = true;
 		}
@@ -50,11 +52,12 @@ public class Controller2D : RaycastController {
 	void HorizontalCollisions(ref Vector2 moveAmount, bool jumpInputDown) {
 		float directionX = collisions.faceDirection;
 		float rayLength = Mathf.Abs(moveAmount.x) + SKIN_WIDTH;
-
+		//if not moving, check for collisions on the side by a minor amount (usually for wall sliding)
 		if (Mathf.Abs(moveAmount.x) < SKIN_WIDTH){
 			rayLength = 2 * SKIN_WIDTH;
 		}
-
+		//the jumpinputdown variable is for the frame that the player jumps, a ray is not cast from the bottom of the collision, so they won't collide with any slopes and stutter their jump
+		//each of the for loops in these sections is to check collissions on each of the rays that are drawn on the colllider
 		for (int i = (!jumpInputDown)?0:1; i < horizontalRayCount; i++) {
 			Vector2 rayOrigin = (directionX == -1) ? raycastOrigins.bottomLeft : raycastOrigins.bottomRight;
 			rayOrigin += Vector2.up * (horizontalRaySpacing * i);
@@ -63,15 +66,15 @@ public class Controller2D : RaycastController {
 			Debug.DrawRay(rayOrigin, Vector2.right * directionX * rayLength, Color.red);
 
 			if (hit) {
-
+				//if hitting a through obstacle from the side, continue (go to the next part of the for loop, in this case, the next ray
 				if (hit.collider.tag == "Through") {
 					continue;
 				}
-
+				//if inside the obstacle, usually in the case of a moving block that pushes you into a solid one
 				if (hit.distance == 0) {
 					continue;
 				}
-
+				//slopes that the user can climb
 				float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
 				if (i == 0 && slopeAngle <= maxSlopeAngle) {
 					if (collisions.descendingSlope) {
@@ -86,7 +89,7 @@ public class Controller2D : RaycastController {
 					ClimbSlope(ref moveAmount, slopeAngle, hit.normal);
 					moveAmount.x += distanceToSlopeStart * directionX;
 				}
-
+				//normal collision
 				if (!collisions.climbingSlope || slopeAngle > maxSlopeAngle) {
 					moveAmount.x = (hit.distance - SKIN_WIDTH) * directionX;
 					rayLength = hit.distance;
@@ -103,7 +106,7 @@ public class Controller2D : RaycastController {
 		}
 	}
 
-	void ClimbSlope(ref Vector2 moveAmount, float slopeAngle, Vector2 slopeNormal) {
+	void ClimbSlope(ref Vector2 moveAmount, float slopeAngle, Vector2 slopeNormal) { //climbing a normal slup under max angle
 		//math here: https://www.youtube.com/watch?v=cwcC2tIKObU at around 4 minutes
 		float moveDistance = Mathf.Abs(moveAmount.x);
 		float climbmoveAmountY = Mathf.Sin(slopeAngle * Mathf.Deg2Rad) * moveDistance;
@@ -118,7 +121,7 @@ public class Controller2D : RaycastController {
 		}
 	}
 
-	void DescendSlope(ref Vector2 moveAmount) {
+	void DescendSlope(ref Vector2 moveAmount) { //descending a slope that is under max angle. Check video after the one posted in climb slope for explanation
 
 		RaycastHit2D maxSlopeHitLeft = Physics2D.Raycast(raycastOrigins.bottomLeft, Vector2.down, Mathf.Abs(moveAmount.y) + SKIN_WIDTH, collisionMask);
 		RaycastHit2D maxSlopeHitRight = Physics2D.Raycast(raycastOrigins.bottomRight, Vector2.down, Mathf.Abs(moveAmount.y) + SKIN_WIDTH, collisionMask);
@@ -152,7 +155,7 @@ public class Controller2D : RaycastController {
 		}
 	}
 
-	void SlideDownMaxSlope(RaycastHit2D hit, ref Vector2 moveAmount) {
+	void SlideDownMaxSlope(RaycastHit2D hit, ref Vector2 moveAmount) { //if the slope is too steep to climb, slide down it
 
 		if (hit) {
 			float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
@@ -166,7 +169,7 @@ public class Controller2D : RaycastController {
 		}
 	}
 
-	void VerticalCollisions(ref Vector2 moveAmount, bool jumpInputDown) {
+	void VerticalCollisions(ref Vector2 moveAmount, bool jumpInputDown) { //similiar to horizontal but with a few differences, especially with through platforms. Also stores standing on top of if on one
 		float directionY = Mathf.Sign(moveAmount.y);
 		float rayLength = Mathf.Abs(moveAmount.y) + SKIN_WIDTH;
 		for (int i = 0; i < verticalRayCount; i++) {
@@ -178,16 +181,16 @@ public class Controller2D : RaycastController {
 			
 			if (hit) {
 				if (hit.collider.tag == "Through") {
-					if (directionY == 1 || hit.distance == 0) {
+					if (directionY == 1 || hit.distance == 0) { //if moving up, continue to next ray. (only collides of moving down)
 						continue;
 					}
-					if (collisions.fallingThrough == true && collisions.fallingThroughPlatform == hit.collider) {
+					if (collisions.fallingThrough == true && collisions.fallingThroughPlatform == hit.collider) { //if the user if falling through the platform
 						continue;
 					}
-					if (directionalInput.y == -1) {
+					if (directionalInput.y == -1) { //enables the user to drop through the platform after they press down
 						collisions.readyToFallThrough = true;
 					}
-					if (directionalInput.y == -1 && jumpInputDown) {
+					if (directionalInput.y == -1 && jumpInputDown) { //drops through the platform
 						if (hit.collider == collisions.fallingThroughPlatform) {
 							collisions.fallingThrough = true;
 							continue;
@@ -195,8 +198,8 @@ public class Controller2D : RaycastController {
 					}
 				}
 
-				collisions.fallingThrough = false;
-				collisions.fallingThroughPlatform = hit.collider;
+				collisions.fallingThrough = false; //if made it through the last if statement, the user isn't falling through the platform
+				collisions.fallingThroughPlatform = hit.collider; //sets the platform the user is standing on top of, important for if the user does fall through it, it stores it and resets it when landing on another platform
 				moveAmount.y = (hit.distance - SKIN_WIDTH) * directionY;
 				rayLength = hit.distance;
 
@@ -209,7 +212,7 @@ public class Controller2D : RaycastController {
 				collisions.above = directionY == 1;
 			}
 		}
-
+		//chicking for collisions when climbing a slope...?
 		if (collisions.climbingSlope) {
 			float directionX = Mathf.Sign(moveAmount.x);
 			rayLength = Mathf.Abs(moveAmount.x) + SKIN_WIDTH;

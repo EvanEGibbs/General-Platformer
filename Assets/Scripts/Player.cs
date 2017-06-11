@@ -9,9 +9,9 @@ public class Player : MonoBehaviour {
 	public float maxJumpHeight = 4;
 	public float minJumpHeight = 1;
 	public float timeToJumpApex = .4f;
-	float accelerationTimeAirborne = .1f;
-	float accelerationTimeGrounded = .1f;
-	float moveSpeed = 6;
+	public float accelerationTimeAirborne = .1f;
+	public float accelerationTimeGrounded = .1f;
+	public float moveSpeed = 6;
 
 	public Vector2 wallJumpClimb;
 	public Vector2 wallJumpOff;
@@ -19,17 +19,18 @@ public class Player : MonoBehaviour {
 
 	public float wallSlideSpeedMax = 3;
 	public float wallStickTime = .25f;
-	float timeToWallUnstick;
 
-	float gravity;
+	float timeToWallUnstick;
+	float gravity; //calculated via jump height and timeToJumpApex
 	float maxJumpVelocity;
 	float minJumpVelocity;
+
 	Vector3 velocity;
 	float velocityXSmoothing;
 
 	Controller2D controller;
-
 	Vector2 directionalInput;
+
 	bool wallSliding;
 	int wallDirX;
 	bool jumpInputDown;
@@ -38,6 +39,7 @@ public class Player : MonoBehaviour {
 		controller = GetComponent<Controller2D>();
 
 		//explanation of the following math: https://www.youtube.com/watch?v=PlT44xr0iW0&t=9s at around 6 minutes
+		//can move the following code to update to mess with parameters in real time for when getting the right gravity, jumpping, etc.
 		gravity = -(2 * maxJumpHeight) / Mathf.Pow(timeToJumpApex, 2);
 		maxJumpVelocity = Mathf.Abs(gravity) * timeToJumpApex;
 		//math here: https://www.youtube.com/watch?v=rVfR14UNNDo&t=2s
@@ -53,32 +55,34 @@ public class Player : MonoBehaviour {
 		controller.Move(velocity * Time.deltaTime, jumpInputDown, directionalInput);
 
 		if (controller.collisions.above || controller.collisions.below) {
-			if (controller.collisions.slidingDownMaxSlope) {
+			if (controller.collisions.slidingDownMaxSlope) { //sliding down maximum slope
 				velocity.y += controller.collisions.slopeNormal.y * -gravity * Time.deltaTime;
-			} else {
+			} else { //reset velocity if hiting a block from above, or landing on one from below
 				velocity.y = 0;
 			}
 		}
-		jumpInputDown = false;
+		jumpInputDown = false; //so the jumpInputDown variable is only set to be true for one frame when the jump button is pressed
 	}
 
-	public void SetDirectionalInput(Vector2 input) {
+	//BUTTON INPUTS
+
+	public void SetDirectionalInput(Vector2 input) { //from playerInput class
 		directionalInput = input;
 	}
 
-	public void OnJumpInputDown() {
+	public void OnJumpInputDown() { //from playerInput class
 		jumpInputDown = true;
 		//wall jumping
-		if (wallSliding) {
-			if (wallDirX == directionalInput.x) {
+		if (wallSliding) { //Jump off of the wall
+			if (wallDirX == directionalInput.x) { //Wall jump climb
 				timeToWallUnstick = 0;
 				velocity.x = -wallDirX * wallJumpClimb.x;
 				velocity.y = wallJumpClimb.y;
-			} else if (directionalInput.x == 0) {
+			} else if (directionalInput.x == 0) { //jump off of wall
 				timeToWallUnstick = 0;
 				velocity.x = -wallDirX * wallJumpOff.x;
 				velocity.y = wallJumpOff.y;
-			} else {
+			} else { //leap off of wall
 				timeToWallUnstick = 0;
 				velocity.x = -wallDirX * wallLeap.x;
 				velocity.y = wallLeap.y;
@@ -100,7 +104,7 @@ public class Player : MonoBehaviour {
 			}
 		}
 	}
-	public void OnJumpInputUp() {
+	public void OnJumpInputUp() { //for variable jump height
 		if (velocity.y > minJumpVelocity) {
 			velocity.y = minJumpVelocity;
 		}
@@ -122,16 +126,16 @@ public class Player : MonoBehaviour {
 				velocity.y = -wallSlideSpeedMax;
 			}
 
-			if (timeToWallUnstick > 0) {
+			if (timeToWallUnstick > 0) { //stick to wall if not holding the button long enough
 				velocityXSmoothing = 0;
 				velocity.x = 0;
 
-				if (directionalInput.x != wallDirX && directionalInput.x != 0) {
+				if (directionalInput.x != wallDirX && directionalInput.x != 0) { //holding button to unstick from wall
 					timeToWallUnstick -= Time.deltaTime;
-				} else {
+				} else { //restick to wall if not holding button towards wall
 					timeToWallUnstick = wallStickTime;
 				}
-			} else {
+			} else { //restick to wall if not pressing either direction
 				timeToWallUnstick = wallStickTime;
 			}
 		}
