@@ -46,7 +46,7 @@ public class Player : MonoBehaviour {
 		maxJumpVelocity = Mathf.Abs(gravity) * timeToJumpApex;
 		//math here: https://www.youtube.com/watch?v=rVfR14UNNDo&t=2s
 		minJumpVelocity = Mathf.Sqrt(2 * Mathf.Abs(gravity) * minJumpHeight);
-		Debug.Log("Gravity " + gravity + " jump velocity: " + maxJumpVelocity);
+		//Debug.Log("Gravity " + gravity + " jump velocity: " + maxJumpVelocity);
 	}
 
 	void Update() {
