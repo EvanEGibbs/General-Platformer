@@ -172,11 +172,6 @@ public class Controller2D : RaycastController {
 	void VerticalCollisions(ref Vector2 moveAmount, bool jumpInputDown) { //similiar to horizontal but with a few differences, especially with through platforms. Also stores standing on top of if on one
 		float directionY = Mathf.Sign(moveAmount.y);
 		float rayLength = Mathf.Abs(moveAmount.y) + SKIN_WIDTH;
-
-		if (Mathf.Abs(moveAmount.y) < SKIN_WIDTH) {
-			rayLength = 2 * SKIN_WIDTH;
-		}
-
 		for (int i = 0; i < verticalRayCount; i++) {
 			Vector2 rayOrigin = (directionY == -1) ? raycastOrigins.bottomLeft : raycastOrigins.topLeft;
 			rayOrigin += Vector2.right * (verticalRaySpacing * i + moveAmount.x);
