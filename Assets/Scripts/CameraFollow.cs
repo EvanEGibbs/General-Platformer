@@ -27,9 +27,12 @@ public class CameraFollow : MonoBehaviour {
 	bool lookAheadStopped;
 	bool lookAheadStopped2;
 
+	Camera cameraComponent;
+
 	private void Start() {
 		focusArea = new FocusArea(target.myCollider.bounds, focusAreaSize);
 		levelPlaneCollider = levelPlane.GetComponent<MeshCollider>();
+		cameraComponent = GetComponent<Camera>();
 	}
 
 	private void LateUpdate() { //late update so the camera adjusts itself after all movement is finished
@@ -63,22 +66,24 @@ public class CameraFollow : MonoBehaviour {
 
 	void ConstrictCameraToBoundaries() {
 
+		//explanation of the code: http://answers.unity3d.com/questions/1011399/fix-boundries-for-perspective-camera.html
+
 		Vector3 levelExtents = levelPlaneCollider.bounds.extents;
 		Vector3 topRightEdge = new Vector3 (levelPlane.transform.position.x + levelExtents.x, levelPlane.transform.position.y + levelExtents.y, -10);
 		Vector3 downLeftEdge = new Vector3 (levelPlane.transform.position.x - levelExtents.x, levelPlane.transform.position.y - levelExtents.y, -10);
 
-		Vector3 topRightEdgeScreen = Camera.main.WorldToScreenPoint(topRightEdge);
-		Vector3 downLeftEdgeScreen = Camera.main.WorldToScreenPoint(downLeftEdge);
+		Vector3 topRightEdgeScreen = cameraComponent.WorldToScreenPoint(topRightEdge);
+		Vector3 downLeftEdgeScreen = cameraComponent.WorldToScreenPoint(downLeftEdge);
 
-		Debug.Log(downLeftEdgeScreen + "  " + Screen.height);
+		//Debug.Log(downLeftEdgeScreen + "  " + Screen.height);
 
 		// Is the camera out of the map bounds?
 		if (topRightEdgeScreen.x < Screen.width || topRightEdgeScreen.y < Screen.height || downLeftEdgeScreen.x > 0 || downLeftEdgeScreen.y > 0) {
 			//smack a big plane at the camera position that covers more than the screen is showing
-			Plane cameraPositionFixPlane = new Plane(Vector3.forward * 10, Camera.main.transform.position);
+			Plane cameraPositionFixPlane = new Plane(Vector3.forward * 10, transform.position);
 
 			//move the top right edge back so its inside the screen again
-			Vector3 topRightEdgeScreenFixed = Camera.main.ScreenToWorldPoint(new Vector3(Mathf.Max(Screen.width, topRightEdgeScreen.x), Mathf.Max(Screen.height, topRightEdgeScreen.y), topRightEdgeScreen.z));
+			Vector3 topRightEdgeScreenFixed = cameraComponent.ScreenToWorldPoint(new Vector3(Mathf.Max(Screen.width, topRightEdgeScreen.x), Mathf.Max(Screen.height, topRightEdgeScreen.y), topRightEdgeScreen.z));
 			//now we know the offset the camera should move at distance z to fix the top right edge
 			Vector3 topRightOffsetAtDistance = topRightEdgeScreenFixed - topRightEdge;
 
@@ -87,16 +92,16 @@ public class CameraFollow : MonoBehaviour {
 			//now we know the offset the camera should move at distance z to fix the down left edge
 			Vector3 downLeftOffsetAtDistance = downLeftEdgeScreenFixed - downLeftEdge;
 
-			Debug.Log("offset: " + downLeftOffsetAtDistance);
+			//Debug.Log("offset: " + downLeftOffsetAtDistance);
 
 
 			//where is the center of the screen translated at given distance
-			Vector3 cameraCenterAtDistance = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width / 2.0f, Screen.height / 2.0f, topRightEdge.z));
+			Vector3 cameraCenterAtDistance = cameraComponent.ScreenToWorldPoint(new Vector3(Screen.width / 2.0f, Screen.height / 2.0f, topRightEdge.z));
 			//now lets offset the center of the screen with the offset we found
 			Vector3 cameraCenterAtDistanceFixed = new Vector3(cameraCenterAtDistance.x - topRightOffsetAtDistance.x - downLeftOffsetAtDistance.x, cameraCenterAtDistance.y - topRightOffsetAtDistance.y - downLeftOffsetAtDistance.y, cameraCenterAtDistance.z);
 
 			//here we generate a ray at the camera center at distance pointing back to the camera
-			Ray rayFromFixedDistanceToCameraPlane = new Ray(cameraCenterAtDistanceFixed, -Camera.main.transform.forward);
+			Ray rayFromFixedDistanceToCameraPlane = new Ray(cameraCenterAtDistanceFixed, -cameraComponent.transform.forward);
 
 			//this is where the magic happens, lets raycast back to the plane i smacked infront of the  camera
 			float d;
@@ -106,9 +111,19 @@ public class CameraFollow : MonoBehaviour {
 			Vector3 planeHitPoint = rayFromFixedDistanceToCameraPlane.GetPoint(d);
 
 			//position camera at the hitpoint we found
-			Camera.main.transform.position = new Vector3(planeHitPoint.x, planeHitPoint.y, Camera.main.transform.position.z);
+			transform.position = new Vector3(planeHitPoint.x, planeHitPoint.y, transform.position.z);
 
 		}
+
+		//if the level plane's width is thinner than the camera width, snap the camera's x to the center of the level plane
+		if (topRightEdgeScreen.x - downLeftEdgeScreen.x < Screen.width) {
+			transform.position = new Vector3(levelPlane.transform.position.x, transform.position.y, transform.position.z);
+		}
+		//if the level plane's height is smaller than the camera's height, snap the camera's y to the center of the level plane
+		if (topRightEdgeScreen.y - downLeftEdgeScreen.y < Screen.height) {
+			transform.position = new Vector3(transform.position.x, levelPlane.transform.position.y, transform.position.z);
+		}
+
 	}
 
 	private void OnDrawGizmos() {
