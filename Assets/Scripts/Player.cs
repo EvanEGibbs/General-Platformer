@@ -11,6 +11,8 @@ public class Player : MonoBehaviour {
 	public float timeToJumpApex = .4f;
 	public float accelerationTimeAirborne = .1f;
 	public float accelerationTimeGrounded = .1f;
+	public float decelerationTimeAirborne = 0f;
+	public float decelerationTimeGrounded = 0f;
 	public float moveSpeed = 6;
 
 	public Vector2 wallJumpClimb;
@@ -29,7 +31,7 @@ public class Player : MonoBehaviour {
 	float velocityXSmoothing;
 
 	Controller2D controller;
-	Vector2 directionalInput;
+	public Vector2 directionalInput;
 
 	bool wallSliding;
 	int wallDirX;
@@ -71,36 +73,38 @@ public class Player : MonoBehaviour {
 	}
 
 	public void OnJumpInputDown() { //from playerInput class
-		jumpInputDown = true;
-		//wall jumping
-		if (wallSliding) { //Jump off of the wall
-			if (wallDirX == directionalInput.x) { //Wall jump climb
-				timeToWallUnstick = 0;
-				velocity.x = -wallDirX * wallJumpClimb.x;
-				velocity.y = wallJumpClimb.y;
-			} else if (directionalInput.x == 0) { //jump off of wall
-				timeToWallUnstick = 0;
-				velocity.x = -wallDirX * wallJumpOff.x;
-				velocity.y = wallJumpOff.y;
-			} else { //leap off of wall
-				timeToWallUnstick = 0;
-				velocity.x = -wallDirX * wallLeap.x;
-				velocity.y = wallLeap.y;
-			}
-		}
-
-		if (controller.collisions.below) {
-			//jump while sliding down a steep slope
-			if (controller.collisions.slidingDownMaxSlope) {
-				if (directionalInput.x != -Mathf.Sign(controller.collisions.slopeNormal.x)) { //not jumping against max slope
-					velocity.y = maxJumpVelocity * controller.collisions.slopeNormal.y;
-					velocity.x = maxJumpVelocity * controller.collisions.slopeNormal.x;
-
+		if (!controller.collisions.above) { //if there's nothing directly above you, you can jump
+			jumpInputDown = true;
+			//wall jumping
+			if (wallSliding) { //Jump off of the wall
+				if (wallDirX == directionalInput.x) { //Wall jump climb
+					timeToWallUnstick = 0;
+					velocity.x = -wallDirX * wallJumpClimb.x;
+					velocity.y = wallJumpClimb.y;
+				} else if (directionalInput.x == 0) { //jump off of wall
+					timeToWallUnstick = 0;
+					velocity.x = -wallDirX * wallJumpOff.x;
+					velocity.y = wallJumpOff.y;
+				} else { //leap off of wall
+					timeToWallUnstick = 0;
+					velocity.x = -wallDirX * wallLeap.x;
+					velocity.y = wallLeap.y;
 				}
 			}
-			//jump off of ground normally if not going to jump down a through platform
-			else if (!controller.collisions.readyToFallThrough) {
-				velocity.y = maxJumpVelocity;
+
+			if (controller.collisions.below) {
+				//jump while sliding down a steep slope
+				if (controller.collisions.slidingDownMaxSlope) {
+					if (directionalInput.x != -Mathf.Sign(controller.collisions.slopeNormal.x)) { //not jumping against max slope
+						velocity.y = maxJumpVelocity * controller.collisions.slopeNormal.y;
+						velocity.x = maxJumpVelocity * controller.collisions.slopeNormal.x;
+
+					}
+				}
+				//jump off of ground normally if not going to jump down a through platform
+				else if (!controller.collisions.readyToFallThrough) {
+					velocity.y = maxJumpVelocity;
+				}
 			}
 		}
 	}
@@ -112,7 +116,13 @@ public class Player : MonoBehaviour {
 
 	private void CalculateVelocity() {
 		float targetVelocity = directionalInput.x * moveSpeed;
-		velocity.x = Mathf.SmoothDamp(velocity.x, targetVelocity, ref velocityXSmoothing, (controller.collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne);
+
+		if (targetVelocity == 0 || Mathf.Sign(targetVelocity) != Mathf.Sign(velocity.x) && velocity.x != 0) { //if coming to a stop or moving in the opposite direction, use deceleration time
+			velocity.x = Mathf.SmoothDamp(velocity.x, targetVelocity, ref velocityXSmoothing, (controller.collisions.below) ? decelerationTimeGrounded : decelerationTimeAirborne);
+		} else { //otherwise, use acceleration time
+			velocity.x = Mathf.SmoothDamp(velocity.x, targetVelocity, ref velocityXSmoothing, (controller.collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne);
+		}
+		
 		velocity.y += gravity * Time.deltaTime;
 	}
 
@@ -121,6 +131,7 @@ public class Player : MonoBehaviour {
 		wallSliding = false;
 		if ((controller.collisions.left || controller.collisions.right) && !controller.collisions.below) {
 			wallSliding = true;
+			controller.collisions.fallingThroughPlatform = null; //if fell through a platform then started a wall slide, can jump on the platform again.
 
 			if (velocity.y < -wallSlideSpeedMax) {
 				velocity.y = -wallSlideSpeedMax;

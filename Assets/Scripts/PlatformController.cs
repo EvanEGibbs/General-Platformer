@@ -54,7 +54,7 @@ public class PlatformController : RaycastController {
 		if (Time.time < nextMoveTime) {
 			return Vector3.zero;
 		}
-		//if, say, the way point number is 5 out of four, it will reset to the first one
+		//if, say, the way point number is 5 out of for, it will reset to the first one
 		fromWaypointIndex %= globalWaypoints.Length;
 		int toWaypointIndex = (fromWaypointIndex + 1) % globalWaypoints.Length;
 		//check which way point moving from, which waypont moving to, get the distance, percent between, and finally the eased number
