@@ -16,13 +16,15 @@ public class CameraFollow : MonoBehaviour {
 	FocusArea focusArea;
 
 	public GameObject levelPlane;
-	public MeshCollider levelPlaneCollider;
+	MeshCollider levelPlaneCollider;
+	public ParallaxBackground parallaxBackground;
 
 	float currentLookAheadX;
 	float targetLookAheadX;
 	float lookAheadDirectionX;
 	float smoothLookVelocityX;
 	float smoothVelocityY;
+	float originalZ;
 
 	bool lookAheadStopped;
 	bool lookAheadStopped2;
@@ -33,9 +35,12 @@ public class CameraFollow : MonoBehaviour {
 		focusArea = new FocusArea(target.myCollider.bounds, focusAreaSize);
 		levelPlaneCollider = levelPlane.GetComponent<MeshCollider>();
 		cameraComponent = GetComponent<Camera>();
+		originalZ = transform.position.z;
 	}
 
 	private void LateUpdate() { //late update so the camera adjusts itself after all movement is finished
+
+		Vector3 oldCoordinates = transform.position;
 
 		focusArea.Update(target.myCollider.bounds);
 
@@ -59,9 +64,14 @@ public class CameraFollow : MonoBehaviour {
 
 		focusPosition.y = Mathf.SmoothDamp(transform.position.y, focusPosition.y, ref smoothVelocityY, verticalSmoothTime);
 		focusPosition += Vector2.right * currentLookAheadX;
-		transform.position = (Vector3)focusPosition + Vector3.forward * -10;
+		transform.position = (Vector3)focusPosition + Vector3.forward * originalZ;
 
 		ConstrictCameraToBoundaries();
+
+		Vector3 moveAmount = transform.position - oldCoordinates;
+		if (parallaxBackground != null) {
+			parallaxBackground.ParallaxMove(moveAmount);
+		}
 	}
 
 	void ConstrictCameraToBoundaries() {
@@ -69,8 +79,8 @@ public class CameraFollow : MonoBehaviour {
 		//explanation of the code: http://answers.unity3d.com/questions/1011399/fix-boundries-for-perspective-camera.html
 
 		Vector3 levelExtents = levelPlaneCollider.bounds.extents;
-		Vector3 topRightEdge = new Vector3 (levelPlane.transform.position.x + levelExtents.x, levelPlane.transform.position.y + levelExtents.y, -10);
-		Vector3 downLeftEdge = new Vector3 (levelPlane.transform.position.x - levelExtents.x, levelPlane.transform.position.y - levelExtents.y, -10);
+		Vector3 topRightEdge = new Vector3 (levelPlane.transform.position.x + levelExtents.x, levelPlane.transform.position.y + levelExtents.y, levelPlane.transform.position.z + transform.position.z);
+		Vector3 downLeftEdge = new Vector3 (levelPlane.transform.position.x - levelExtents.x, levelPlane.transform.position.y - levelExtents.y, levelPlane.transform.position.z + transform.position.z);
 
 		Vector3 topRightEdgeScreen = cameraComponent.WorldToScreenPoint(topRightEdge);
 		Vector3 downLeftEdgeScreen = cameraComponent.WorldToScreenPoint(downLeftEdge);
