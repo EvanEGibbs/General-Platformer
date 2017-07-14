@@ -19,6 +19,8 @@ public class CameraFollow : MonoBehaviour {
 	MeshCollider levelPlaneCollider;
 	public ParallaxBackground parallaxBackground;
 
+	float originalVerticalOffset;
+	float verticalOffsetTimer = 0;
 	float currentLookAheadX;
 	float targetLookAheadX;
 	float lookAheadDirectionX;
@@ -36,9 +38,12 @@ public class CameraFollow : MonoBehaviour {
 		levelPlaneCollider = levelPlane.GetComponent<MeshCollider>();
 		cameraComponent = GetComponent<Camera>();
 		originalZ = transform.position.z;
+		originalVerticalOffset = verticalOffset;
 	}
 
 	private void LateUpdate() { //late update so the camera adjusts itself after all movement is finished
+
+		ResetVerticalOffset();
 
 		Vector3 oldCoordinates = transform.position;
 
@@ -71,6 +76,21 @@ public class CameraFollow : MonoBehaviour {
 		Vector3 moveAmount = transform.position - oldCoordinates;
 		if (parallaxBackground != null) {
 			parallaxBackground.ParallaxMove(moveAmount);
+		}
+	}
+
+	public void AdjustVerticalOffset(float newVertOffset, float newVertOffsetTimer) {
+		verticalOffset = newVertOffset;
+		verticalOffsetTimer = newVertOffsetTimer;
+	}
+
+	void ResetVerticalOffset() {
+		if (verticalOffsetTimer > 0) {
+			verticalOffsetTimer -= Time.deltaTime;
+			if (verticalOffsetTimer <= 0) {
+				verticalOffsetTimer = 0;
+				verticalOffset = originalVerticalOffset;
+			}
 		}
 	}
 
